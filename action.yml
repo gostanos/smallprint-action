@@ -1,0 +1,21 @@
+name: "Small Print check"
+description: "Fail the build when the small print of the MCP servers, skills or instruction files in this repository moved away from smallprint.lock. Local only: nothing is sent anywhere."
+author: "EmberStack LLC"
+branding:
+  icon: "file-text"
+  color: "gray-dark"
+inputs:
+  lockfile:
+    description: "Path to the lock written by `smallprint lock`"
+    required: false
+    default: "smallprint.lock"
+  version:
+    description: "smallprint CLI version to run"
+    required: false
+    default: "0.0.13"
+runs:
+  using: "composite"
+  steps:
+    - name: Compare this checkout with the lock
+      shell: bash
+      run: npx -y smallprint@${{ inputs.version }} check --locked --file "${{ inputs.lockfile }}" --no-upload --no-signup
