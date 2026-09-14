@@ -1,4 +1,11 @@
-# Small Print check, as a GitHub Action
+# Small Print, the public pieces
+
+Two small things that read the [Small Print](https://smallprint.dev) record, the nightly diff of what MCP servers, agent skills and plugins tell your agent. The site, the ingest and the grading rules live elsewhere; the rules themselves are printed at https://smallprint.dev/how-we-grade.
+
+- **This Action** fails a build when the small print in a repository moved away from its lock.
+- **[`mcp/`](./mcp)**: `smallprint-mcp`, an MCP server with three read-only tools over the public record (`npx -y smallprint-mcp`; registry name `dev.smallprint/smallprint`).
+
+## Small Print check, as a GitHub Action
 
 Fails the build when the small print your agents read has moved: an MCP server's version, a skill's files, or an instruction file such as CLAUDE.md, AGENTS.md or an `.mcp.json`, compared with a lock you committed.
 
