@@ -4,6 +4,7 @@ Two small things that read the [Small Print](https://smallprint.dev) record, the
 
 - **This Action** fails a build when the small print in a repository moved away from its lock.
 - **[`mcp/`](./mcp)**: `smallprint-mcp`, an MCP server with three read-only tools over the public record (`npx -y smallprint-mcp`; registry name `dev.smallprint/smallprint`).
+- **`Dockerfile`** builds and runs that server over stdio, for registries that start a server to check it answers.
 
 ## Small Print check, as a GitHub Action
 
