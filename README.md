@@ -3,6 +3,7 @@
 Two small things that read the [Small Print](https://smallprint.dev) record, the nightly diff of what MCP servers, agent skills and plugins tell your agent. The site, the ingest and the grading rules live elsewhere; the rules themselves are printed at https://smallprint.dev/how-we-grade.
 
 - **This Action** fails a build when the small print in a repository moved away from its lock.
+- **`npx smallprint gate`** asks the record before a session whether any server here moved since the lock or gained a high advisory; exit codes for a shell hook. CLI 0.0.14.
 - **[`mcp/`](./mcp)**: `smallprint-mcp`, an MCP server with four read-only tools over the public record (`npx -y smallprint-mcp`; registry name `dev.smallprint/smallprint`).
 - **`Dockerfile`** builds and runs that server over stdio, for registries that start a server to check it answers.
 
