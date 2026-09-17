@@ -125,27 +125,102 @@ export function describeApproval(e: Entry, approved: string): string {
   return lines.join("\n");
 }
 
+/** Structured shapes returned beside the text, so a client can read a field without parsing prose. */
+const ADVISORY = z.object({ id: z.string(), severity: z.string(), source: z.string(), versionRange: z.string().nullable(), url: z.string() });
+const RELEASE = z.object({ from: z.string().nullable(), to: z.string(), publishedAt: z.string().nullable(), worst: z.string(), summary: z.string(), changes: z.array(z.object({ field: z.string(), subject: z.string().nullable(), severity: z.string(), rule: z.string(), diff: z.string() })) });
+const releaseOut = (r: Release) => ({ from: r.from, to: r.to, publishedAt: r.publishedAt, worst: r.worst, summary: r.summary, changes: r.changes.map((c) => ({ field: c.field, subject: c.subject, severity: c.severity, rule: c.severityRule, diff: c.diff })) });
+const advisoryOut = (a: Advisory) => ({ id: a.id, severity: a.severity, source: a.source, versionRange: a.versionRange, url: a.url });
+const READ_ONLY = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true } as const;
+const NAME_DESC = "The entry, with its registry prefix when known: npm:@scope/name, pypi:name, mcp-registry:io.github.owner/server, skills.sh:owner/repo/skill, oci:ghcr.io/owner/image. A bare name is read as an npm package. Case-sensitive, up to 300 characters.";
+const BEHAVIOUR = "Read-only: one HTTPS GET to smallprint.dev per call, no account, no key, nothing about the caller sent, and the server or skill asked about is never run or contacted. Rate limited to one entry per request; a 429 answer says to wait a minute. A name not in the catalog returns a plain error, not a guess.";
+const result = <T,>(textOut: string, structured: T) => ({ content: [{ type: "text" as const, text: textOut }], structuredContent: structured as Record<string, unknown> });
+const errorResult = (msg: string) => ({ content: [{ type: "text" as const, text: msg }], structuredContent: { error: msg }, isError: true });
+
 export function buildServer(): McpServer {
-  const server = new McpServer({ name: "smallprint", version: "0.2.0" }, { instructions: "Small Print keeps a public, dated record of the tool descriptions, schemas and instructions (the small print) of MCP servers, agent skills and plugins, hashed every version and diffed between versions, with every change graded by a printed rule and public advisories joined by version. Use these tools before installing or trusting a server or skill, or when a user asks whether one changed; changed_since_approval answers yes or no against a version, hash or date that was reviewed. Facts only: the record attributes every advisory to its source and never calls anything malicious." });
+  const server = new McpServer({ name: "smallprint", version: "0.2.0" }, { instructions: "Small Print keeps a public, dated record of the tool descriptions, schemas and instructions (the small print) of MCP servers, agent skills and plugins, hashed every version and diffed between versions, with every change graded by a printed rule and public advisories joined by version. Use these tools before installing or trusting a server or skill, or when a user asks whether one changed. Start with lookup_entry when you know nothing about an entry; use changed_since_approval when a version, hash or date was already reviewed; changes_since for the diffs themselves; advisories_for for the advisories. Facts only: every advisory is attributed to its source and nothing is called malicious." });
   server.registerTool(
     "lookup_entry",
-    { title: "Look up an entry on the Small Print record", description: "What the record holds for one MCP server, skill or plugin: versions on record, the tools read from the pinned version, how many releases changed the small print and the worst grade, and the advisories that name it. Name forms: npm:@scope/name, pypi:name, mcp-registry:io.github.owner/server, skills.sh:owner/repo/skill, oci:ghcr.io/owner/image; a bare name is read as npm.", inputSchema: { name: z.string().min(1).max(300).describe("The entry's name, with its registry prefix when known") } },
-    async ({ name }) => { const r = await readEntry(name); return text("error" in r ? r.error : describeEntry(r.entry)); },
+    {
+      title: "Look up an entry on the Small Print record",
+      description: `What the record holds for one MCP server, skill or plugin: versions on record, the tools read from the pinned version, how many releases changed the small print and the worst grade, and the advisories that name it. Use it first, when nothing about the entry is known yet, or to confirm an entry exists before the other tools; use changes_since for the diffs and advisories_for for advisory detail. Not for private or unpublished servers, which have no page. ${BEHAVIOUR}`,
+      inputSchema: { name: z.string().min(1).max(300).describe(NAME_DESC) },
+      outputSchema: { canonicalName: z.string(), url: z.string(), kind: z.string(), latestVersion: z.string().nullable(), versionsOnRecord: z.number(), toolsRead: z.number().nullable(), releasesChanged: z.number(), worstGrade: z.string(), advisories: z.array(ADVISORY) },
+      annotations: { title: "Look up an entry", ...READ_ONLY },
+    },
+    async ({ name }) => {
+      const r = await readEntry(name);
+      if ("error" in r) return errorResult(r.error);
+      const e = r.entry;
+      const changed = e.releases.filter((x) => !x.identical);
+      return result(describeEntry(e), { canonicalName: e.asset.canonicalName, url: e.asset.url, kind: e.asset.kind, latestVersion: e.asset.latestVersion, versionsOnRecord: e.versions.length, toolsRead: e.tools ? e.tools.length : null, releasesChanged: changed.length, worstGrade: worstOf(changed), advisories: e.advisories.map(advisoryOut) });
+    },
   );
   server.registerTool(
     "changes_since",
-    { title: "Changes to an entry's small print", description: "The releases of one entry whose tool descriptions, schemas or instructions changed, with each change's diff, grade and the rule that graded it. Optionally only releases published since a date and only changes at or above a grade.", inputSchema: { name: z.string().min(1).max(300), since: z.string().regex(/^\d{4}-\d{2}-\d{2}/).optional().describe("ISO date; releases published on or after it"), min_severity: z.enum(["info", "low", "medium", "high", "critical"]).default("low") } },
-    async ({ name, since, min_severity }) => { const r = await readEntry(name); return text("error" in r ? r.error : describeChanges(r.entry, since, min_severity)); },
+    {
+      title: "Changes to an entry's small print",
+      description: `The releases of one entry whose tool descriptions, schemas or instructions changed, each with its diff, its grade and the rule that graded it (rules at ${BASE}/how-we-grade). Use it to read what actually changed, after lookup_entry or changed_since_approval said something did; use changed_since_approval instead when the question is only whether anything moved since an approved version. Filters: since keeps releases published on or after a date; min_severity drops changes below a grade (default low, so plain version bumps and identical releases are never listed). Returns at most 12 releases in text; the structured result carries all of them. ${BEHAVIOUR}`,
+      inputSchema: {
+        name: z.string().min(1).max(300).describe(NAME_DESC),
+        since: z.string().regex(/^\d{4}-\d{2}-\d{2}/).optional().describe("ISO date, YYYY-MM-DD; only releases published on or after it. Omit for every release on record."),
+        min_severity: z.enum(["info", "low", "medium", "high", "critical"]).default("low").describe("Lowest grade to include: info, low, medium, high or critical. Default low. Use high to see only changes that name a secret, a destination or an instruction to hide something."),
+      },
+      outputSchema: { canonicalName: z.string(), url: z.string(), releases: z.array(RELEASE), total: z.number() },
+      annotations: { title: "Changes to the small print", ...READ_ONLY },
+    },
+    async ({ name, since, min_severity }) => {
+      const r = await readEntry(name);
+      if ("error" in r) return errorResult(r.error);
+      const e = r.entry;
+      const floor = RANK[min_severity] ?? 1;
+      const rel = e.releases.filter((x) => (!since || (x.publishedAt ?? "") >= since) && (RANK[x.worst] ?? 0) >= floor && !x.identical);
+      return result(describeChanges(e, since, min_severity), { canonicalName: e.asset.canonicalName, url: e.asset.url, releases: rel.map(releaseOut), total: rel.length });
+    },
   );
   server.registerTool(
     "advisories_for",
-    { title: "Advisories that name an entry", description: "Every public security advisory on record that names one entry, each attributed to the database or report that published it, with its severity criterion and the affected version range.", inputSchema: { name: z.string().min(1).max(300), version: z.string().max(100).optional().describe("A version to read the ranges against") } },
-    async ({ name, version }) => { const r = await readEntry(name); return text("error" in r ? r.error : describeAdvisories(r.entry, version)); },
+    {
+      title: "Advisories that name an entry",
+      description: `Every public security advisory on record that names one entry, each attributed to the database or report that published it, with its severity criterion and the affected version range. Use it when deciding whether a specific version is inside a known advisory, or after lookup_entry reported advisories; it adds nothing for an entry with none. Small Print attributes and never judges: the severity is the source's or a printed CVSS band. ${BEHAVIOUR}`,
+      inputSchema: {
+        name: z.string().min(1).max(300).describe(NAME_DESC),
+        version: z.string().max(100).optional().describe("A version string to read the affected ranges against, for example 1.4.2. Optional; the ranges are returned either way and the caller compares."),
+      },
+      outputSchema: { canonicalName: z.string(), url: z.string(), advisories: z.array(ADVISORY), total: z.number() },
+      annotations: { title: "Advisories for an entry", ...READ_ONLY },
+    },
+    async ({ name, version }) => {
+      const r = await readEntry(name);
+      if ("error" in r) return errorResult(r.error);
+      const e = r.entry;
+      return result(describeAdvisories(e, version), { canonicalName: e.asset.canonicalName, url: e.asset.url, advisories: e.advisories.map(advisoryOut), total: e.advisories.length });
+    },
   );
   server.registerTool(
     "changed_since_approval",
-    { title: "Has the small print changed since it was approved?", description: "Yes or no, before using a server or skill: compare the record's latest small print with the version, content hash or ISO date that was reviewed. The answer starts with UNCHANGED, CHANGED or UNKNOWN, then the releases that changed it and their worst grade. A review recorded against a version or hash can be checked on every run without re-reading the tools.", inputSchema: { name: z.string().min(1).max(300).describe("The entry's name, with its registry prefix when known"), approved: z.string().min(1).max(120).describe("The version string, the 64-hex content hash, or the ISO date (YYYY-MM-DD) that was approved") } },
-    async ({ name, approved }) => { const r = await readEntry(name); return text("error" in r ? r.error : describeApproval(r.entry, approved.trim())); },
+    {
+      title: "Has the small print changed since it was approved?",
+      description: `Yes or no, before using a server or skill: has its small print moved since the version, content hash or date that was reviewed? The answer opens with UNCHANGED, CHANGED or UNKNOWN, then the releases that changed it since and their worst grade, then whether the review can stand. Use it on every run when an approval is on file, instead of re-reading the tools; use lookup_entry when nothing was approved yet and changes_since to read the diffs after a CHANGED answer. UNKNOWN means the approved version is not on record or its small print was never read, so nothing is compared; treat it as no answer, not as safe. ${BEHAVIOUR}`,
+      inputSchema: {
+        name: z.string().min(1).max(300).describe(NAME_DESC),
+        approved: z.string().min(1).max(120).describe("What was reviewed: a version string exactly as published (1.4.2), the 64-character hex content hash from an earlier answer, or an ISO date YYYY-MM-DD. A date compares against releases published after it."),
+      },
+      outputSchema: { status: z.enum(["UNCHANGED", "CHANGED", "UNKNOWN"]), canonicalName: z.string(), url: z.string(), latestVersion: z.string().nullable(), latestContentHash: z.string().nullable(), releasesSince: z.array(RELEASE), worstGrade: z.string().nullable(), advisories: z.number() },
+      annotations: { title: "Changed since approval?", ...READ_ONLY },
+    },
+    async ({ name, approved }) => {
+      const r = await readEntry(name);
+      if ("error" in r) return errorResult(r.error);
+      const e = r.entry;
+      const textOut = describeApproval(e, approved.trim());
+      const status = textOut.startsWith("UNCHANGED") ? "UNCHANGED" : textOut.startsWith("CHANGED") ? "CHANGED" : "UNKNOWN";
+      const a = approved.trim();
+      const isDate = /^\d{4}-\d{2}-\d{2}/.test(a);
+      const v = /^[0-9a-f]{64}$/i.test(a) ? e.versions.find((x) => x.contentHash?.toLowerCase() === a.toLowerCase()) : isDate ? undefined : e.versions.find((x) => x.version === a);
+      const since = isDate ? a : (v?.publishedAt ?? "");
+      const rel = status === "UNKNOWN" ? [] : e.releases.filter((x) => !x.identical && (x.publishedAt ?? "") > since);
+      return result(textOut, { status, canonicalName: e.asset.canonicalName, url: e.asset.url, latestVersion: e.baseline?.version ?? null, latestContentHash: e.baseline?.contentHash ?? null, releasesSince: rel.map(releaseOut), worstGrade: rel.length ? worstOf(rel) : null, advisories: e.advisories.length });
+    },
   );
   return server;
 }
