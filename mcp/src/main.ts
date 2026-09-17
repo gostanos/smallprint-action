@@ -101,8 +101,32 @@ export function describeAdvisories(e: Entry, version: string | undefined): strin
   return out.join("\n");
 }
 
+/** Yes or no: has the small print moved since a version, a content hash or a date the caller approved? (decision 137) */
+export function describeApproval(e: Entry, approved: string): string {
+  const a = e.asset;
+  const latest = e.baseline;
+  const isHash = /^[0-9a-f]{64}$/i.test(approved);
+  const isDate = /^\d{4}-\d{2}-\d{2}/.test(approved);
+  const v = isHash ? e.versions.find((x) => x.contentHash?.toLowerCase() === approved.toLowerCase()) : isDate ? undefined : e.versions.find((x) => x.version === approved);
+  if (!latest?.contentHash) return `UNKNOWN: the small print of ${a.displayName} has not been read yet, so nothing can be compared. Record: ${a.url}`;
+  if (!isDate && !v) return `UNKNOWN: ${approved} is not a version or content hash on record for ${a.displayName}. Versions on record: ${e.versions.slice(0, 20).map((x) => x.version).join(", ")}${e.versions.length > 20 ? ", …" : ""}. Record: ${a.url}`;
+  if (!isDate && !v!.contentHash) return `UNKNOWN: version ${v!.version} of ${a.displayName} is on record but its small print was not read, so it cannot be compared with ${latest.version}. Record: ${a.url}`;
+  const since = isDate ? approved : (v!.publishedAt ?? "");
+  const rel = e.releases.filter((r) => !r.identical && (r.publishedAt ?? "") > since);
+  const same = isDate ? rel.length === 0 : v!.contentHash === latest.contentHash;
+  const head = same
+    ? `UNCHANGED: the small print of ${a.displayName} is the same as ${isDate ? `on ${day(since)}` : isHash ? "the approved hash" : `version ${approved}`}; latest ${latest.version}, content hash ${latest.contentHash}.`
+    : `CHANGED: the small print of ${a.displayName} moved since ${isDate ? day(since) : isHash ? "the approved hash" : `version ${approved}`}. Latest ${latest.version}, content hash ${latest.contentHash}. ${rel.length} release(s) changed it; worst grade ${worstOf(rel)}.`;
+  const lines = [head];
+  for (const r of rel.slice(0, 6)) lines.push(`  ${r.from ?? "first read"} -> ${r.to} (${day(r.publishedAt)}), worst ${r.worst}: ${r.summary}`);
+  if (rel.length > 6) lines.push(`  ${rel.length - 6} more at ${a.url}`);
+  if (e.advisories.length) lines.push(`${e.advisories.length} advisory(ies) name it; ask advisories_for.`);
+  lines.push(same ? `Review can stand. Record: ${a.url}` : `Re-review before use; changes_since shows each diff with its rule. Record: ${a.url}`);
+  return lines.join("\n");
+}
+
 export function buildServer(): McpServer {
-  const server = new McpServer({ name: "smallprint", version: "0.1.0" }, { instructions: "Small Print keeps a public, dated record of the tool descriptions, schemas and instructions (the small print) of MCP servers, agent skills and plugins, hashed every version and diffed between versions, with every change graded by a printed rule and public advisories joined by version. Use these tools before installing or trusting a server or skill, or when a user asks whether one changed. Facts only: the record attributes every advisory to its source and never calls anything malicious." });
+  const server = new McpServer({ name: "smallprint", version: "0.2.0" }, { instructions: "Small Print keeps a public, dated record of the tool descriptions, schemas and instructions (the small print) of MCP servers, agent skills and plugins, hashed every version and diffed between versions, with every change graded by a printed rule and public advisories joined by version. Use these tools before installing or trusting a server or skill, or when a user asks whether one changed; changed_since_approval answers yes or no against a version, hash or date that was reviewed. Facts only: the record attributes every advisory to its source and never calls anything malicious." });
   server.registerTool(
     "lookup_entry",
     { title: "Look up an entry on the Small Print record", description: "What the record holds for one MCP server, skill or plugin: versions on record, the tools read from the pinned version, how many releases changed the small print and the worst grade, and the advisories that name it. Name forms: npm:@scope/name, pypi:name, mcp-registry:io.github.owner/server, skills.sh:owner/repo/skill, oci:ghcr.io/owner/image; a bare name is read as npm.", inputSchema: { name: z.string().min(1).max(300).describe("The entry's name, with its registry prefix when known") } },
@@ -117,6 +141,11 @@ export function buildServer(): McpServer {
     "advisories_for",
     { title: "Advisories that name an entry", description: "Every public security advisory on record that names one entry, each attributed to the database or report that published it, with its severity criterion and the affected version range.", inputSchema: { name: z.string().min(1).max(300), version: z.string().max(100).optional().describe("A version to read the ranges against") } },
     async ({ name, version }) => { const r = await readEntry(name); return text("error" in r ? r.error : describeAdvisories(r.entry, version)); },
+  );
+  server.registerTool(
+    "changed_since_approval",
+    { title: "Has the small print changed since it was approved?", description: "Yes or no, before using a server or skill: compare the record's latest small print with the version, content hash or ISO date that was reviewed. The answer starts with UNCHANGED, CHANGED or UNKNOWN, then the releases that changed it and their worst grade. A review recorded against a version or hash can be checked on every run without re-reading the tools.", inputSchema: { name: z.string().min(1).max(300).describe("The entry's name, with its registry prefix when known"), approved: z.string().min(1).max(120).describe("The version string, the 64-hex content hash, or the ISO date (YYYY-MM-DD) that was approved") } },
+    async ({ name, approved }) => { const r = await readEntry(name); return text("error" in r ? r.error : describeApproval(r.entry, approved.trim())); },
   );
   return server;
 }

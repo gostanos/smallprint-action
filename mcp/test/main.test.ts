@@ -52,3 +52,24 @@ describe("what the tools say", () => {
     expect(describeAdvisories({ ...entry, advisories: [] } as never, undefined)).toContain("No advisory on record names @acme/fs");
   });
 });
+
+import { describeApproval } from "../src/main";
+
+describe("changed since approval", () => {
+  const e = { ...entry, baseline: { version: "2.0.0", publishedAt: "2026-09-02T00:00:00Z", contentHash: "a", treeHash: null } };
+  it("answers UNCHANGED for the current version or hash", () => {
+    expect(describeApproval(e, "2.0.0")).toMatch(/^UNCHANGED/);
+    expect(describeApproval(e, "a".padEnd(64, "0")).startsWith("UNKNOWN")).toBe(true);
+  });
+  it("answers CHANGED for an older version and lists the releases since", () => {
+    const out = describeApproval(e, "1.0.0");
+    expect(out).toMatch(/^CHANGED/);
+    expect(out).toContain("1.0.0 -> 2.0.0");
+    expect(out).toContain("worst grade high");
+  });
+  it("answers by date and says UNKNOWN for a version not on record", () => {
+    expect(describeApproval(e, "2026-09-03")).toMatch(/^UNCHANGED/);
+    expect(describeApproval(e, "2026-08-01")).toMatch(/^CHANGED/);
+    expect(describeApproval(e, "9.9.9")).toMatch(/^UNKNOWN/);
+  });
+});

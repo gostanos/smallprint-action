@@ -1,8 +1,8 @@
 {
   "name": "smallprint-mcp",
   "mcpName": "dev.smallprint/smallprint",
-  "version": "0.1.0",
-  "description": "Read the Small Print record from inside an agent: an MCP server with three read-only tools for the small print of MCP servers, skills and plugins.",
+  "version": "0.2.0",
+  "description": "Read the Small Print record from inside an agent: an MCP server with four read-only tools for the small print of MCP servers, skills and plugins.",
   "license": "MIT",
   "type": "module",
   "scripts": {
