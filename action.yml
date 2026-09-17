@@ -12,7 +12,7 @@ inputs:
   version:
     description: "smallprint CLI version to run"
     required: false
-    default: "0.0.13"
+    default: "0.0.14"
 runs:
   using: "composite"
   steps:
