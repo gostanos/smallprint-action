@@ -1,5 +1,7 @@
 # Small Print, the public pieces
 
+[![M8ven Verified](https://m8ven.ai/badge/mcp/gostanos/smallprint-action?variant=verified)](https://m8ven.ai/mcp/gostanos/smallprint-action)
+
 Two small things that read the [Small Print](https://smallprint.dev) record, the nightly diff of what MCP servers, agent skills and plugins tell your agent. The site, the ingest and the grading rules live elsewhere; the rules themselves are printed at https://smallprint.dev/how-we-grade.
 
 - **This Action** fails a build when the small print in a repository moved away from its lock.
