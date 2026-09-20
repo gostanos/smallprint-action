@@ -130,14 +130,14 @@ const ADVISORY = z.object({ id: z.string(), severity: z.string(), source: z.stri
 const RELEASE = z.object({ from: z.string().nullable(), to: z.string(), publishedAt: z.string().nullable(), worst: z.string(), summary: z.string(), changes: z.array(z.object({ field: z.string(), subject: z.string().nullable(), severity: z.string(), rule: z.string(), diff: z.string() })) });
 const releaseOut = (r: Release) => ({ from: r.from, to: r.to, publishedAt: r.publishedAt, worst: r.worst, summary: r.summary, changes: r.changes.map((c) => ({ field: c.field, subject: c.subject, severity: c.severity, rule: c.severityRule, diff: c.diff })) });
 const advisoryOut = (a: Advisory) => ({ id: a.id, severity: a.severity, source: a.source, versionRange: a.versionRange, url: a.url });
-const READ_ONLY = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true } as const;
+// every tool writes its four hints out in full, so a directory that reads the source without running it sees them (M8ven and OpenAI both check)
 const NAME_DESC = "The entry, with its registry prefix when known: npm:@scope/name, pypi:name, mcp-registry:io.github.owner/server, skills.sh:owner/repo/skill, oci:ghcr.io/owner/image. A bare name is read as an npm package. Case-sensitive, up to 300 characters.";
 const BEHAVIOUR = "Read-only: one HTTPS GET to smallprint.dev per call, no account, no key, nothing about the caller sent, and the server or skill asked about is never run or contacted. Rate limited to one entry per request; a 429 answer says to wait a minute. A name not in the catalog returns a plain error, not a guess.";
 const result = <T,>(textOut: string, structured: T) => ({ content: [{ type: "text" as const, text: textOut }], structuredContent: structured as Record<string, unknown> });
 const errorResult = (msg: string) => ({ content: [{ type: "text" as const, text: msg }], structuredContent: { error: msg }, isError: true });
 
 export function buildServer(): McpServer {
-  const server = new McpServer({ name: "smallprint", version: "0.2.1" }, { instructions: "Small Print keeps a public, dated record of the tool descriptions, schemas and instructions (the small print) of MCP servers, agent skills and plugins, hashed every version and diffed between versions, with every change graded by a printed rule and public advisories joined by version. Use these tools before installing or trusting a server or skill, or when a user asks whether one changed. Start with lookup_entry when you know nothing about an entry; use changed_since_approval when a version, hash or date was already reviewed; changes_since for the diffs themselves; advisories_for for the advisories. Facts only: every advisory is attributed to its source and nothing is called malicious." });
+  const server = new McpServer({ name: "smallprint", version: "0.2.2" }, { instructions: "Small Print keeps a public, dated record of the tool descriptions, schemas and instructions (the small print) of MCP servers, agent skills and plugins, hashed every version and diffed between versions, with every change graded by a printed rule and public advisories joined by version. Use these tools before installing or trusting a server or skill, or when a user asks whether one changed. Start with lookup_entry when you know nothing about an entry; use changed_since_approval when a version, hash or date was already reviewed; changes_since for the diffs themselves; advisories_for for the advisories. Facts only: every advisory is attributed to its source and nothing is called malicious." });
   server.registerTool(
     "lookup_entry",
     {
@@ -145,7 +145,7 @@ export function buildServer(): McpServer {
       description: `What the record holds for one MCP server, skill or plugin: versions on record, the tools read from the pinned version, how many releases changed the small print and the worst grade, and the advisories that name it. Use it first, when nothing about the entry is known yet, or to confirm an entry exists before the other tools; use changes_since for the diffs and advisories_for for advisory detail. Not for private or unpublished servers, which have no page. ${BEHAVIOUR}`,
       inputSchema: { name: z.string().min(1).max(300).describe(NAME_DESC) },
       outputSchema: { canonicalName: z.string(), url: z.string(), kind: z.string(), latestVersion: z.string().nullable(), versionsOnRecord: z.number(), toolsRead: z.number().nullable(), releasesChanged: z.number(), worstGrade: z.string(), advisories: z.array(ADVISORY) },
-      annotations: { title: "Look up an entry", ...READ_ONLY },
+      annotations: { title: "Look up an entry", readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
     },
     async ({ name }) => {
       const r = await readEntry(name);
@@ -166,7 +166,7 @@ export function buildServer(): McpServer {
         min_severity: z.enum(["info", "low", "medium", "high", "critical"]).default("low").describe("Lowest grade to include: info, low, medium, high or critical. Default low. Use high to see only changes that name a secret, a destination or an instruction to hide something."),
       },
       outputSchema: { canonicalName: z.string(), url: z.string(), releases: z.array(RELEASE), total: z.number() },
-      annotations: { title: "Changes to the small print", ...READ_ONLY },
+      annotations: { title: "Changes to the small print", readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
     },
     async ({ name, since, min_severity }) => {
       const r = await readEntry(name);
@@ -187,7 +187,7 @@ export function buildServer(): McpServer {
         version: z.string().max(100).optional().describe("A version string to read the affected ranges against, for example 1.4.2. Optional; the ranges are returned either way and the caller compares."),
       },
       outputSchema: { canonicalName: z.string(), url: z.string(), advisories: z.array(ADVISORY), total: z.number() },
-      annotations: { title: "Advisories for an entry", ...READ_ONLY },
+      annotations: { title: "Advisories for an entry", readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
     },
     async ({ name, version }) => {
       const r = await readEntry(name);
@@ -206,7 +206,7 @@ export function buildServer(): McpServer {
         approved: z.string().min(1).max(120).describe("What was reviewed: a version string exactly as published (1.4.2), the 64-character hex content hash from an earlier answer, or an ISO date YYYY-MM-DD. A date compares against releases published after it."),
       },
       outputSchema: { status: z.enum(["UNCHANGED", "CHANGED", "UNKNOWN"]), canonicalName: z.string(), url: z.string(), latestVersion: z.string().nullable(), latestContentHash: z.string().nullable(), releasesSince: z.array(RELEASE), worstGrade: z.string().nullable(), advisories: z.number() },
-      annotations: { title: "Changed since approval?", ...READ_ONLY },
+      annotations: { title: "Changed since approval?", readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
     },
     async ({ name, approved }) => {
       const r = await readEntry(name);
