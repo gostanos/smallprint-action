@@ -1,0 +1,27 @@
+# An outside check that smallprint.dev answers, from GitHub's network, so an outage is noticed
+# even when the machine that runs the five-minute watchdog is asleep. Every ten minutes, as
+# closely as GitHub keeps the schedule. A failed run emails the repository owner; nothing else
+# happens, and nothing is sent to the site but the request itself.
+name: "Is smallprint.dev up"
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+permissions: {}
+jobs:
+  health:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - name: Ask /api/health, three tries a minute apart
+        run: |
+          for i in 1 2 3; do
+            body="$(curl -sS -m 20 -A "smallprint-uptime/1 (+https://github.com/gostanos/smallprint-action)" https://smallprint.dev/api/health || true)"
+            case "$body" in
+              *'"ok":true'*) echo "up: ${body:0:160}"; exit 0;;
+            esac
+            echo "try $i: no healthy answer: ${body:0:200}"
+            sleep 60
+          done
+          echo "smallprint.dev did not answer healthy in three tries over two minutes"
+          exit 1
