@@ -1,6 +1,6 @@
 # Small Print, the public pieces
 
-[![M8ven Verified](https://m8ven.ai/badge/mcp/gostanos/smallprint-action?variant=verified)](https://m8ven.ai/mcp/gostanos/smallprint-action)
+[![M8ven Score](https://m8ven.ai/badge/mcp/gostanos-smallprint-action-12nii2?v=f92621c28b9eb0ba49f7f8dc22ea074d&variant=verified)](https://m8ven.ai/mcp/gostanos-smallprint-action-12nii2)
 
 Two small things that read the [Small Print](https://smallprint.dev) record, the nightly diff of what MCP servers, agent skills and plugins tell your agent. The site, the ingest and the grading rules live elsewhere; the rules themselves are printed at https://smallprint.dev/how-we-grade.
 
