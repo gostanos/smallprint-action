@@ -1,7 +1,8 @@
 # An outside check that smallprint.dev answers, from GitHub's network, so an outage is noticed
 # even when the machine that runs the five-minute watchdog is asleep. Every ten minutes, as
 # closely as GitHub keeps the schedule. A failed run emails the repository owner; nothing else
-# happens, and nothing is sent to the site but the request itself.
+# happens, and nothing is sent to the site but the request itself. "Up" means the app and its database answered
+# (the body carries checkedAt); whether last night's data is fresh is a separate question the morning report answers.
 name: "Is smallprint.dev up"
 on:
   schedule:
@@ -18,7 +19,7 @@ jobs:
           for i in 1 2 3; do
             body="$(curl -sS -m 20 -A "smallprint-uptime/1 (+https://github.com/gostanos/smallprint-action)" https://smallprint.dev/api/health || true)"
             case "$body" in
-              *'"ok":true'*) echo "up: ${body:0:160}"; exit 0;;
+              *'"checkedAt"'*) echo "up: ${body:0:160}"; exit 0;;
             esac
             echo "try $i: no healthy answer: ${body:0:200}"
             sleep 60
