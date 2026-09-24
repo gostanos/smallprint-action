@@ -59,4 +59,4 @@ Inside an agent instead of a terminal: the MCP server `smallprint-mcp` (`npx -y 
 
 ## Source
 
-The same files that are published here, with the tests, are public at https://github.com/gostanos/smallprint-action/tree/main/cli, where an issue can be opened. About 60 KB of unminified JavaScript plus a 14 KB Python helper; everything clever lives on the server. What the record can and cannot see is written at https://smallprint.dev/faq.
+The program itself, the same files that npm installs, can be read with its tests at https://github.com/gostanos/smallprint-action/tree/main/cli, and an issue can be opened there. That is the program, not anything it finds: what the command reads on your machine stays on your machine. About 60 KB of unminified JavaScript plus a 14 KB Python helper; everything clever lives on the server. What the record can and cannot see is written at https://smallprint.dev/faq.
