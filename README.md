@@ -8,6 +8,7 @@ Two small things that read the [Small Print](https://smallprint.dev) record, the
 - **`npx smallprint gate`** asks the record before a session whether any server here moved since the lock or gained a high advisory; exit codes for a shell hook. CLI 0.0.14.
 - **[`mcp/`](./mcp)**: `smallprint-mcp`, an MCP server with four read-only tools over the public record (`npx -y smallprint-mcp`; registry name `dev.smallprint/smallprint`).
 - **`Dockerfile`** builds and runs that server over stdio, for registries that start a server to check it answers.
+- **[`cli/`](./cli)**: the `smallprint` command itself, the same files that are published to npm, with its tests. `npx smallprint check --no-upload` prints what it found and sends nothing.
 
 ## Small Print check, as a GitHub Action
 
