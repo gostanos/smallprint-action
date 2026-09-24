@@ -6,8 +6,8 @@ The thin, open client for [Small Print](https://smallprint.dev): find the MCP se
 npx smallprint check            # discover, print what will be sent, grade; then one question: watch these every morning?
 npx smallprint check --email you@company.com   # answer it up front; --no-signup never asks
 npx smallprint check --share    # also get a card link you can post
-npx smallprint check --json     # machine-readable inventory, nothing sent
-npx smallprint check --no-upload
+npx smallprint check --json     # machine-readable inventory, nothing sent; says so in itself (about, sent) and names its fields at https://smallprint.dev/cli#json
+npx smallprint check --no-upload  # discover and print, nothing sent
 
 SMALLPRINT_TOKEN=sp_... npx smallprint sync --label "work laptop"   # pin what you run to your daily brief
 npx smallprint sync --label "work laptop" --dry-run                 # show what would be pinned
@@ -56,3 +56,7 @@ It reads Claude Desktop, Claude Code, Cursor, Windsurf, Codex, VS Code, Zed, Gem
 Every trust page is also JSON: `GET /api/asset/npm/@modelcontextprotocol/server-filesystem`. Every advisory too: `GET /api/advisory/CVE-2025-6514`. One item per request, rate limited, same attribution and printed criteria as the pages.
 
 Inside an agent instead of a terminal: the MCP server `smallprint-mcp` (`npx -y smallprint-mcp`, registry name `dev.smallprint/smallprint`) reads the same record with three tools: lookup_entry, changes_since, advisories_for.
+
+## Source
+
+The same files that are published here, with the tests, are public at https://github.com/gostanos/smallprint-action/tree/main/cli, where an issue can be opened. About 60 KB of unminified JavaScript plus a 14 KB Python helper; everything clever lives on the server. What the record can and cannot see is written at https://smallprint.dev/faq.
