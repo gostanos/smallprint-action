@@ -1,0 +1,14 @@
+model = "o4-mini"
+
+[mcp_servers.context7]
+command = "npx"
+args = ["-y", "@upstash/context7-mcp@latest"]
+
+[mcp_servers.jira]
+command = "uvx"
+args = ["mcp-atlassian"]
+[mcp_servers.jira.env]
+JIRA_API_TOKEN = "xoxb-not-really"
+
+[other]
+x = 1

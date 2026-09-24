@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "filesystem": { "command": "npx", "args": ["-y", "@modelcontextprotocol/server-filesystem@2026.8.31", "/Users/nick/Documents"] },
+    "github": { "command": "npx", "args": ["-y", "@modelcontextprotocol/server-github"], "env": { "GITHUB_PERSONAL_ACCESS_TOKEN": "ghp_abcdefghijklmnopqrstuvwxyz0123456789" } },
+    "git": { "command": "uvx", "args": ["mcp-server-git==0.6.2", "--repository", "/tmp/x"] },
+    "remote": { "type": "sse", "url": "https://mcp.example.com/sse?key=SECRET" },
+    "local": { "command": "node", "args": ["/Users/nick/dev/my-server/dist/index.js"] },
+    "docker": { "command": "docker", "args": ["run", "-i", "--rm", "ghcr.io/acme/mcp-thing:1.4.0"] }
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "name": "smallprint",
+  "version": "0.1.0",
+  "private": false,
+  "description": "Discover the MCP servers, skills and plugins your agents have installed, and pin them with Small Print.",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "cli": "tsx src/main.ts",
+    "build": "tsup",
+    "prepublishOnly": "pnpm build"
+  },
+  "devDependencies": {
+    "tsup": "^8.5.1",
+    "tsx": "^4.23.13",
+    "typescript": "~5.9.3",
+    "vitest": "^4.1.11"
+  },
+  "bin": {
+    "smallprint": "dist/smallprint.js"
+  },
+  "files": [
+    "dist",
+    "report",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gostanos/smallprint-action.git",
+    "directory": "cli"
+  },
+  "homepage": "https://smallprint.dev",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "agent-skills",
+    "claude-code",
+    "cursor",
+    "security",
+    "supply-chain"
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
+}
