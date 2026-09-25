@@ -8,6 +8,7 @@ npx smallprint check --email you@company.com   # answer it up front; --no-signup
 npx smallprint check --share    # also get a card link you can post
 npx smallprint check --json     # machine-readable inventory, nothing sent; says so in itself (about, sent) and names its fields at https://smallprint.dev/cli#json
 npx smallprint check --no-upload  # discover and print, nothing sent
+npx smallprint@0.1.1 check        # pinned: npx then never fetches a version you have not read; pin it in anything unattended
 
 SMALLPRINT_TOKEN=sp_... npx smallprint sync --label "work laptop"   # pin what you run to your daily brief
 npx smallprint sync --label "work laptop" --dry-run                 # show what would be pinned
