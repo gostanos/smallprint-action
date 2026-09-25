@@ -38,3 +38,32 @@ git add smallprint.lock
 The check is local: it reads the repository's config and instruction files, compares them with the lock, and sends nothing anywhere. It exits 2 when something moved and prints what. When the change is yours, run `npx smallprint lock --project` again and commit. A lock written without `--project` also holds the machine's home-directory entries, which a CI runner does not have, so that check would fail on every run; the lock records which kind it is and the check honours it.
 
 Inputs: `lockfile` (default `smallprint.lock`), `version` (the CLI version, default 0.0.14).
+
+### With a code-scanning upload
+
+The step can write what moved as a SARIF log, and GitHub's upload-sarif action turns each line into a code-scanning alert on the pull request. Needs the `--sarif` flag, which is in `smallprint` 0.1.2 and later.
+
+```yaml
+      - uses: gostanos/smallprint-action@v1
+        with:
+          sarif: smallprint.sarif
+        continue-on-error: true
+      - uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: smallprint.sarif
+```
+
+### As a pre-commit hook
+
+One line in `.pre-commit-config.yaml` runs the lock check before every commit, offline:
+
+```yaml
+repos:
+  - repo: local
+    hooks:
+      - id: smallprint-lock
+        name: small print lock
+        entry: npx -y smallprint@0.1.1 check --locked --no-upload --no-signup
+        language: system
+        pass_filenames: false
+```

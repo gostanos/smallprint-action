@@ -12,10 +12,14 @@ inputs:
   version:
     description: "smallprint CLI version to run"
     required: false
-    default: "0.0.14"
+    default: "0.1.1"
+  sarif:
+    description: "Path to write a SARIF 2.1.0 log of what moved, for a code-scanning upload (empty: none)"
+    required: false
+    default: ""
 runs:
   using: "composite"
   steps:
     - name: Compare this checkout with the lock
       shell: bash
-      run: npx -y smallprint@${{ inputs.version }} check --locked --file "${{ inputs.lockfile }}" --no-upload --no-signup
+      run: npx -y smallprint@${{ inputs.version }} check --locked --file "${{ inputs.lockfile }}" --no-upload --no-signup ${{ inputs.sarif != '' && format('--sarif "{0}"', inputs.sarif) || '' }}
