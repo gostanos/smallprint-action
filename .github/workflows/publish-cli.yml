@@ -1,0 +1,29 @@
+# Publish the smallprint command to npm from this repository with npm trusted publishing (OpenID Connect): no token,
+# no one-time password, a provenance statement attached to the package. npmjs.com must list this repository and
+# this workflow file as the package's trusted publisher (package settings, Trusted Publisher, GitHub Actions).
+# Run it from the Actions tab or with: gh workflow run publish-cli.yml
+name: Publish smallprint to npm
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  id-token: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+      - name: npm that knows trusted publishing
+        run: npm install -g npm@latest && npm --version
+      - name: Install, build and test the command
+        working-directory: cli
+        run: |
+          npm install --no-audit --no-fund
+          npm run build
+      - name: Publish with provenance
+        working-directory: cli
+        run: npm publish --access public --provenance
