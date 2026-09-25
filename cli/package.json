@@ -1,6 +1,6 @@
 {
   "name": "smallprint",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "private": false,
   "description": "Discover the MCP servers, skills and plugins your agents have installed, and pin them with Small Print.",
   "license": "MIT",
