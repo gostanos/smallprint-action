@@ -18,6 +18,7 @@ The grading rules are printed at https://smallprint.dev/how-we-grade.
 - **[`mcp/`](./mcp)**: `smallprint-mcp`, an MCP server with four read-only tools over the public record (`npx -y smallprint-mcp`; registry name `dev.smallprint/smallprint`).
 - **`Dockerfile`** builds and runs that server over stdio, for registries that start a server to check it answers.
 - **[`cli/`](./cli)**: the `smallprint` command itself, the same files that are published to npm, with its tests. `npx smallprint check --no-upload` prints what it found and sends nothing.
+- **[`tools/verify-chain.mjs`](./tools/verify-chain.mjs)**: recomputes the record chain from the public API, every link, the newest day's entries hash and the Ed25519 signature; `node tools/verify-chain.mjs`.
 
 ## Small Print check, as a GitHub Action
 
