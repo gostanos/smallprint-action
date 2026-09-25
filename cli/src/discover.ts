@@ -11,6 +11,39 @@ import { homedir, platform } from "node:os";
 import { join, resolve } from "node:path";
 import { parseClaudeJson as parseJsonPure, parseCodexToml as parseTomlPure, type Discovered, type DiscoveredServer, type DiscoveredSkill, type Host } from "./parse";
 
+
+/**
+ * The version npx actually runs for an unpinned `npx <pkg>` (decision 222): npx keeps each package it fetched under
+ * ~/.npm/_npx/<hash>/node_modules/<pkg>/package.json, and the newest of those directories is the one the next run uses.
+ * A grade about "the installed version" needs that number; without it the check could only say the version is unknown.
+ */
+export function versionFromNpxCache(pkg: string, npxDir: string = join(homedir(), ".npm", "_npx")): string | null {
+  try {
+    let best: { mtime: number; version: string } | null = null;
+    for (const entry of readdirSync(npxDir)) {
+      const pj = join(npxDir, entry, "node_modules", ...pkg.split("/"), "package.json");
+      try {
+        const st = statSync(pj);
+        const version = String((JSON.parse(readFileSync(pj, "utf8")) as { version?: unknown }).version ?? "");
+        if (!version) continue;
+        if (!best || st.mtimeMs > best.mtime) best = { mtime: st.mtimeMs, version };
+      } catch {
+        /* not in this cache directory */
+      }
+    }
+    return best?.version ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** Fill a missing version for an npm server from the npx cache; a version pinned in the command line is left alone. */
+function withCachedVersion<T extends DiscoveredServer>(s: T): T {
+  if (s.version || !s.canonicalName?.startsWith("npm:") || s.transport !== "stdio") return s;
+  const v = versionFromNpxCache(s.canonicalName.slice(4));
+  return v ? { ...s, version: v } : s;
+}
+
 export * from "./parse";
 import { toUpload as toUploadPure, type UploadItem } from "./parse";
 /** toUpload with the tree hash filled in (node has crypto; the pure module does not). */
@@ -33,12 +66,12 @@ function fileModeHygiene(configPath: string): string[] {
 
 export function parseClaudeJson(text: string, host: Host, configPath: string): DiscoveredServer[] {
   const extra = fileModeHygiene(configPath);
-  return parseJsonPure(text, host, configPath).map((s) => ({ ...s, hygiene: [...s.hygiene, ...extra] }));
+  return parseJsonPure(text, host, configPath).map((s) => withCachedVersion({ ...s, hygiene: [...s.hygiene, ...extra] }));
 }
 
 export function parseCodexToml(text: string, configPath: string): DiscoveredServer[] {
   const extra = fileModeHygiene(configPath);
-  return parseTomlPure(text, configPath).map((s) => ({ ...s, hygiene: [...s.hygiene, ...extra] }));
+  return parseTomlPure(text, configPath).map((s) => withCachedVersion({ ...s, hygiene: [...s.hygiene, ...extra] }));
 }
 
 

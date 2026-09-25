@@ -123,3 +123,24 @@ describe("skill directories never follow symbolic links", () => {
     expect(errors.some((e) => e.includes("linked") && e.includes("symbolic link"))).toBe(true);
   });
 });
+
+describe("the version npx actually runs (decision 222)", () => {
+  it("reads the newest cached package.json for an unpinned npm server, and nothing when there is no cache", async () => {
+    const { mkdtempSync, mkdirSync, writeFileSync, utimesSync } = await import("node:fs");
+    const { tmpdir } = await import("node:os");
+    const { join } = await import("node:path");
+    const { versionFromNpxCache } = await import("../src/discover");
+    const root = mkdtempSync(join(tmpdir(), "npx-"));
+    for (const [dir, version, age] of [["aaa", "1.0.0", 200], ["bbb", "1.2.0", 100]] as const) {
+      const d = join(root, dir, "node_modules", "@scope", "pkg");
+      mkdirSync(d, { recursive: true });
+      const pj = join(d, "package.json");
+      writeFileSync(pj, JSON.stringify({ name: "@scope/pkg", version }));
+      const t = (Date.now() - age * 1000) / 1000;
+      utimesSync(pj, t, t);
+    }
+    expect(versionFromNpxCache("@scope/pkg", root)).toBe("1.2.0");
+    expect(versionFromNpxCache("other", root)).toBeNull();
+    expect(versionFromNpxCache("@scope/pkg", join(root, "missing"))).toBeNull();
+  });
+});
