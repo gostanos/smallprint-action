@@ -9,6 +9,8 @@ npx smallprint check --share    # also get a card link you can post
 npx smallprint check --json     # machine-readable inventory, nothing sent; says so in itself (about, sent) and names its fields at https://smallprint.dev/cli#json
 npx smallprint check --no-upload  # discover and print, nothing sent
 npx smallprint@0.1.1 check        # pinned: npx then never fetches a version you have not read; pin it in anything unattended
+npx smallprint show npm/mcp-remote   # the record for one entry: baseline, tools read, advisories, last releases
+npx smallprint check --locked --sarif smallprint.sarif   # the lock check, plus a SARIF log for a code-scanning upload
 
 SMALLPRINT_TOKEN=sp_... npx smallprint sync --label "work laptop"   # pin what you run to your daily brief
 npx smallprint sync --label "work laptop" --dry-run                 # show what would be pinned

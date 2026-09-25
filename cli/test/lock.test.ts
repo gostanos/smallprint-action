@@ -52,3 +52,17 @@ describe("lockfile", () => {
     expect(displayPath("/Users/nick/proj/.claude/agents/x.md", home, cwd)).toBe(".claude/agents/x.md");
   });
 });
+
+describe("SARIF for a lock that moved (decision 223)", () => {
+  it("makes one error result per line, names the rule by the kind, and points at a file when the line is about one", async () => {
+    const { sarifLog } = await import("../src/lock");
+    const log = sarifLog(["  CHANGED  filesystem (claude-desktop, 1.2.0): version 1.2.0 -> 1.3.0", "  NEW      CLAUDE.md: not in the lock"], "smallprint.lock", "0.1.2") as { runs: { results: { ruleId: string; level: string; locations?: unknown[] }[]; tool: { driver: { rules: { id: string }[]; version: string } } }[] };
+    const run = log.runs[0]!;
+    expect(run.results.map((r) => r.ruleId)).toEqual(["smallprint/lock-changed", "smallprint/lock-new"]);
+    expect(run.results.every((r) => r.level === "error")).toBe(true);
+    expect(run.results[0]!.locations).toBeUndefined();
+    expect(run.results[1]!.locations).toEqual([{ physicalLocation: { artifactLocation: { uri: "CLAUDE.md" } } }]);
+    expect(run.tool.driver.rules.map((r) => r.id).sort()).toEqual(["smallprint/lock-changed", "smallprint/lock-new"]);
+    expect(run.tool.driver.version).toBe("0.1.2");
+  });
+});

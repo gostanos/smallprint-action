@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 /**
  * npx smallprint check [--json] [--no-upload] [--share] [--email <you@x>] [--no-signup] [--base <url>]
+ * npx smallprint show <registry>/<name>      the record for one entry, from the read API (decision 223)
+ * npx smallprint check --locked [--sarif <file>]   the lock check, with a SARIF log for code scanning
  * npx smallprint sync  --label "work laptop" [--yes] [--prune] [--dry-run] [--base <url>]
  *   Needs SMALLPRINT_TOKEN (or --token), minted on your brief settings page. Uploads the same
  *   inventory as check and pins it to your account, so the daily brief watches it. Also sends
@@ -24,7 +26,7 @@ import { dirname, join, sep } from "node:path";
 import { discover, toUpload, type Discovered } from "./discover";
 import { detectFirewalls, firewallsForUpload } from "./firewalls";
 import { compareInstructions, formatInstructions, pathHash, readInstructionFiles, toFileUpload, type InstructionBaseline } from "./instructions";
-import { buildLock, diffIsEmpty, diffLock, formatDiff, LOCK_FILE, parseLock, projectItems, type LockScope } from "./lock";
+import { buildLock, diffIsEmpty, diffLock, formatDiff, LOCK_FILE, parseLock, projectItems, type LockScope, sarifLog } from "./lock";
 import { launchdPlist, schtasksCommand, systemdUnits, schedulePlan, systemLaunchdPlist, systemPaths, systemPlan, systemUnits } from "./schedule";
 import { execFileSync } from "node:child_process";
 import { chmodSync, chownSync, copyFileSync, rmSync, statSync } from "node:fs";
@@ -242,6 +244,13 @@ function checkLocked(found: ReturnType<typeof discover>): number {
   }
   console.log(`Differs from ${path} (written ${previous.written.slice(0, 10)}):`);
   for (const l of formatDiff(d)) console.log(l);
+  // --sarif <file>: the same lines as a SARIF 2.1.0 log, one result each, for a code-scanning upload (decision 223)
+  const sarifPath = opt("sarif");
+  if (sarifPath) {
+    const lines = formatDiff(d);
+    writeFileSync(sarifPath, JSON.stringify(sarifLog(lines, path, VERSION), null, 2));
+    console.log(`SARIF written to ${sarifPath} (${lines.length} result${lines.length === 1 ? "" : "s"}).`);
+  }
   console.log(`If these are yours, run \`smallprint lock${scope === "project" ? " --project" : ""}\` again and commit it. Exit 2.`);
   if (scope === "machine" && d.filesMissing.length + d.removed.length > 0) console.log("A machine lock includes home-directory entries, which another machine or a CI runner will not have; a lock written with --project holds only this repository's.");
   return 2;
@@ -792,8 +801,49 @@ async function gate(): Promise<number> {
 }
 const RANK_ORDER = ["info", "low", "medium", "high", "critical"];
 
+/** `smallprint show <registry>/<name>`: the record for one entry, from the public read API, in a screenful (decision 223). */
+async function show(): Promise<number> {
+  const spec = args[1];
+  if (!spec || !spec.includes("/")) {
+    console.error("usage: smallprint show <registry>/<name>, for example smallprint show npm/mcp-remote or smallprint show npm/@scope/name");
+    return 1;
+  }
+  const slash = spec.indexOf("/");
+  const registry = spec.slice(0, slash);
+  const name = spec.slice(slash + 1);
+  const url = `${base}/api/asset/${encodeURIComponent(registry)}/${name.split("/").map(encodeURIComponent).join("/")}`;
+  let res: Response;
+  try {
+    res = await fetch(url, { headers: { "user-agent": `smallprint/${VERSION}` } });
+  } catch (err) {
+    console.error(`could not reach ${base}: ${(err as Error).message}`);
+    return 1;
+  }
+  if (res.status === 404) { console.log(`${spec}: not in the catalog. It gets a trust page on the next catalog pass if a registry lists it.`); return 1; }
+  if (!res.ok) { console.error(`${url} answered ${res.status}`); return 1; }
+  const j = (await res.json()) as { asset: { canonicalName: string; displayName: string; kind: string; registry: string; description: string | null }; baseline: { version: string; publishedAt: string | null } | null; tools: unknown[] | null; remoteRead: { checkedAt: string; status: string; toolCount: number | null } | null; advisories: { id: string; severity: string; summary: string }[]; releases: { from: string; to: string; publishedAt: string | null; worst: string | null; identical: boolean; summary: string }[]; url?: string };
+  console.log(`${j.asset.displayName}  (${j.asset.kind} on ${j.asset.registry})`);
+  if (j.asset.description) console.log(`  ${j.asset.description.replace(/\s+/g, " ").slice(0, 160)}`);
+  if (j.baseline) console.log(`  baseline ${j.baseline.version}${j.baseline.publishedAt ? `, published ${j.baseline.publishedAt.slice(0, 10)}` : ""}${j.tools ? `, ${j.tools.length} tools read` : ", small print not read yet"}`);
+  if (j.remoteRead) console.log(`  answered our request ${j.remoteRead.checkedAt.slice(0, 10)}: ${j.remoteRead.status === "ok" ? `${j.remoteRead.toolCount ?? 0} tools listed` : j.remoteRead.status}`);
+  console.log(`  advisories on record: ${j.advisories.length}${j.advisories.length ? ` (worst ${j.advisories[0]!.severity}: ${j.advisories[0]!.id})` : ""}`);
+  const rel = j.releases.slice(0, 5);
+  if (rel.length) {
+    console.log(`  last ${rel.length} release${rel.length === 1 ? "" : "s"}:`);
+    for (const r of rel) console.log(`    ${r.from} -> ${r.to}${r.publishedAt ? `  ${r.publishedAt.slice(0, 10)}` : ""}  ${r.identical ? "identical small print" : `${r.worst ?? "graded"}: ${r.summary.replace(/\s+/g, " ").slice(0, 90)}`}`);
+  }
+  console.log(`  ${base}${pathFor(j.asset.canonicalName)}`);
+  return 0;
+}
+function pathFor(canonicalName: string): string {
+  const i = canonicalName.indexOf(":");
+  return `/a/${canonicalName.slice(0, i)}/${canonicalName.slice(i + 1).split("/").map(encodeURIComponent).join("/")}`;
+}
+
 if (cmd === "check") {
   process.exit(await check());
+} else if (cmd === "show") {
+  process.exitCode = await show();
 } else if (cmd === "lock") {
   process.exit(lock());
 } else if (cmd === "gate") {

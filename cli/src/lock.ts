@@ -150,3 +150,24 @@ export function parseLock(text: string): Lockfile {
   const scope: LockScope = j.scope === "project" ? "project" : "machine";
   return { version: LOCK_VERSION, written: typeof j.written === "string" ? j.written : "", scope, items: j.items as LockItem[], files: j.files as LockFileEntry[] };
 }
+
+/**
+ * The lines of formatDiff as a SARIF 2.1.0 log (decision 223): one result per line, level error, the rule named after the
+ * kind of change, and a file location when the line is about a file. For GitHub code scanning uploads.
+ */
+export function sarifLog(diffLines: readonly string[], lockPath: string, version: string): Record<string, unknown> {
+  const results = diffLines.map((l) => {
+    const m = /^\s*(\w+)\s+(.*)$/.exec(l);
+    const kind = (m?.[1] ?? "CHANGED").toLowerCase();
+    const text = m?.[2] ?? l;
+    const file = /^([^:(]+):/.exec(text)?.[1]?.trim();
+    return {
+      ruleId: `smallprint/lock-${kind}`,
+      level: "error",
+      message: { text: `${text}. The small print moved away from ${lockPath}; if this is yours, run smallprint lock again and commit it.` },
+      ...(file && !file.includes(" ") ? { locations: [{ physicalLocation: { artifactLocation: { uri: file } } }] } : {}),
+    };
+  });
+  const rules = [...new Set(results.map((r) => r.ruleId))].map((id) => ({ id, shortDescription: { text: "The small print this project's agents read moved away from the committed lock" }, helpUri: "https://smallprint.dev/cli" }));
+  return { version: "2.1.0", $schema: "https://json.schemastore.org/sarif-2.1.0.json", runs: [{ tool: { driver: { name: "smallprint", version, informationUri: "https://smallprint.dev/cli", rules } }, results }] };
+}
