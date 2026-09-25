@@ -2,7 +2,7 @@
 
 [![M8ven Score](https://m8ven.ai/badge/mcp/gostanos-smallprint-action-12nii2?v=f92621c28b9eb0ba49f7f8dc22ea074d&variant=verified)](https://m8ven.ai/mcp/gostanos-smallprint-action-12nii2)
 
-Two small things that read the [Small Print](https://smallprint.dev) record, the nightly diff of what MCP servers, agent skills and plugins tell your agent. The site, the ingest and the grading rules live elsewhere; the rules themselves are printed at https://smallprint.dev/how-we-grade.
+Two small things that read the [Small Print](https://smallprint.dev) record, the nightly diff of what MCP servers, agent skills and plugins tell your agent. Small Print itself watches what you pin and emails you the morning it changes; free for 25 pins and the daily brief, Pro for scheduled syncs and the instruction-file record (https://smallprint.dev/pricing). The site, the ingest and the grading rules live elsewhere; the rules themselves are printed at https://smallprint.dev/how-we-grade.
 
 - **This Action** fails a build when the small print in a repository moved away from its lock.
 - **`npx smallprint gate`** asks the record before a session whether any server here moved since the lock or gained a high advisory; exit codes for a shell hook. CLI 0.0.14.
