@@ -41,7 +41,7 @@ npx smallprint lock             # writes smallprint.lock: what this machine runs
 npx smallprint check --locked   # compares with the lock; exit 2 when anything moved. Local only, works offline
 ```
 
-The lock holds names, versions, hosts and hashes, and the paths of instruction files, never a configuration value. Commit it; `check --locked` then says exactly what moved, on a laptop or in CI. The GitHub Action in `action/` of the repository runs that one command.
+The lock holds names, versions, hosts and hashes, and the paths of instruction files, never a configuration value. For a server with a registry identity and a version it also carries the record's digest of that version's tool names, descriptions and input schemas, fetched when the lock is written (`--offline` skips it), and `smallprint gate` says when the record's digest for that version has changed since. Commit it; `check --locked` then says exactly what moved, on a laptop or in CI. The GitHub Action in `action/` of the repository runs that one command.
 
 ## Before a session: ask the record
 
@@ -56,7 +56,7 @@ It reads Claude Desktop, Claude Code, Cursor, Windsurf, Codex, VS Code, Zed, Gem
 
 ## Reading the record without the CLI
 
-Every trust page is also JSON: `GET /api/asset/npm/@modelcontextprotocol/server-filesystem`. Every advisory too: `GET /api/advisory/CVE-2025-6514`. One item per request, rate limited, same attribution and printed criteria as the pages.
+Every trust page is also JSON: `GET /api/asset/npm/@modelcontextprotocol/server-filesystem`. Every advisory too: `GET /api/advisory/CVE-2025-6514`. One exact version has a receipt, the digest of its tool names, descriptions and input schemas plus the signed chain row that covers it: `GET /api/receipt/npm/mcp-remote/0.14.3`. The words inside every entry's tool text: `GET /api/search?q=webhook`. One item per request, rate limited, same attribution and printed criteria as the pages.
 
 Inside an agent instead of a terminal: the MCP server `smallprint-mcp` (`npx -y smallprint-mcp`, registry name `dev.smallprint/smallprint`) reads the same record with three tools: lookup_entry, changes_since, advisories_for.
 

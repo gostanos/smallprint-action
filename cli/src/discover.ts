@@ -98,6 +98,9 @@ export function configLocations(home = homedir(), cwd = process.cwd()): ConfigLo
     { host: "claude-code", path: join(cwd, ".mcp.json"), format: "claude-json" },
     { host: "claude-code", path: join(home, ".claude", "skills"), format: "skills-dir" },
     { host: "claude-code", path: join(cwd, ".claude", "skills"), format: "skills-dir" },
+    // the .agents/skills convention (skills.sh and the agents that read it), home and project (decision 224)
+    { host: "manual", path: join(home, ".agents", "skills"), format: "skills-dir" },
+    { host: "manual", path: join(cwd, ".agents", "skills"), format: "skills-dir" },
     { host: "cursor", path: join(home, ".cursor", "mcp.json"), format: "cursor-json" },
     { host: "cursor", path: join(cwd, ".cursor", "mcp.json"), format: "cursor-json" },
     { host: "windsurf", path: join(home, ".codeium", "windsurf", "mcp_config.json"), format: "cursor-json" },

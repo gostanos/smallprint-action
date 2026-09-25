@@ -24,6 +24,8 @@ export interface LockItem {
   /** For skills: the SKILL.md hash and the hash over every file. */
   skillMdSha256?: string;
   treeSha256?: string;
+  /** For a server with a registry identity and a version: the record's digest of that version's tool names, descriptions and input schemas, taken from smallprint.dev when the lock was written (decision 224). */
+  recordSha256?: string;
 }
 
 export interface LockFileEntry {

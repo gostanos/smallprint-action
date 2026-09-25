@@ -193,7 +193,7 @@ function currentLock(found: ReturnType<typeof discover>, scope: LockScope) {
 }
 
 /** `smallprint lock`: write what this machine runs and the hashes of its instruction files. Nothing is sent. */
-function lock(): number {
+async function lock(): Promise<number> {
   const scope = lockScope();
   const current = currentLock(discover(), scope);
   const path = lockPath();
@@ -204,6 +204,23 @@ function lock(): number {
     } catch (err) {
       console.error(`${path}: ${(err as Error).message}; not overwriting it. Move it aside to write a fresh lock.`);
       return 1;
+    }
+  }
+  // the record's digest of each pinned version rides in the lock (decision 224), so a later gate can tell if the record
+  // itself changed for that version; skipped with --offline, and a server the record does not know keeps no digest
+  if (!flag("offline")) {
+    for (const it of current.items) {
+      if (it.kind !== "mcp" || !it.canonicalName || !it.version) continue;
+      const [registry, ...rest] = it.canonicalName.split(":");
+      try {
+        const res = await fetch(`${base}/api/asset/${registry}/${rest.join(":").split("/").map(encodeURIComponent).join("/")}`, { headers: { accept: "application/json", "user-agent": `smallprint-cli/${VERSION}` }, signal: TIMEOUT() });
+        if (!res.ok) continue;
+        const e = (await res.json()) as { versions?: { version: string; contentHash: string | null }[] };
+        const h = e.versions?.find((v) => v.version === it.version)?.contentHash;
+        if (h) it.recordSha256 = h;
+      } catch {
+        /* offline or slow: the lock is still complete without the digest */
+      }
     }
   }
   writeFileSync(path, JSON.stringify(current, null, 2) + "\n");
@@ -782,6 +799,12 @@ async function gate(): Promise<number> {
       console.log(`  ?  ${cn}: ${(err as Error).message}`); unknown++; continue;
     }
     const installed = it.version ?? lockedVersion.get(cn) ?? null;
+    // the lock's copy of the record digest for the locked version against the record now (decision 224)
+    const lockedItem = locked?.items.find((l) => l.canonicalName === cn);
+    if (lockedItem?.recordSha256 && lockedItem.version) {
+      const now = e.versions.find((v) => v.version === lockedItem.version)?.contentHash;
+      if (now && now !== lockedItem.recordSha256) { console.log(`  !  ${cn} @ ${lockedItem.version}: the record's digest for this version changed since the lock was written (was ${lockedItem.recordSha256.slice(0, 12)}, now ${now.slice(0, 12)})`); moved++; }
+    }
     const since = lockedVersion.get(cn) ?? installed;
     const sinceRow = since ? e.versions.find((v) => v.version === since) : undefined;
     const changedSince = sinceRow ? e.releases.filter((r) => !r.identical && (r.publishedAt ?? "") > (sinceRow.publishedAt ?? "")) : [];
@@ -845,7 +868,7 @@ if (cmd === "check") {
 } else if (cmd === "show") {
   process.exitCode = await show();
 } else if (cmd === "lock") {
-  process.exit(lock());
+  process.exit(await lock());
 } else if (cmd === "gate") {
   process.exit(await gate());
 } else if (cmd === "sync") {
