@@ -13,8 +13,8 @@ The grading rules are printed at https://smallprint.dev/how-we-grade.
 
 ## What is in this repository
 
-- **This Action** fails a build when the small print in a repository moved away from its lock.
-- **`npx smallprint gate`** asks the record before a session whether any server here moved since the lock or gained a high advisory; exit codes for a shell hook. CLI 0.1.2.
+- **This Action** fails a build when the small print in a repository changed since its lock was written.
+- **`npx smallprint gate`** asks the record before a session whether any server here changed since the lock or gained a high advisory; exit codes for a shell hook. CLI 0.1.2.
 - **[`mcp/`](./mcp)**: `smallprint-mcp`, an MCP server with four read-only tools over the public record (`npx -y smallprint-mcp`; registry name `dev.smallprint/smallprint`).
 - **`Dockerfile`** builds and runs that server over stdio, for registries that start a server to check it answers.
 - **[`cli/`](./cli)**: the `smallprint` command itself, the same files that are published to npm, with its tests. `npx smallprint check --no-upload` prints what it found and sends nothing.
@@ -22,7 +22,7 @@ The grading rules are printed at https://smallprint.dev/how-we-grade.
 
 ## Small Print check, as a GitHub Action
 
-Fails the build when the small print your agents read has moved: an MCP server's version, a skill's files, or an instruction file such as CLAUDE.md, AGENTS.md or an `.mcp.json`, compared with a lock you committed.
+Fails the build when the small print your agents read has changed: an MCP server's version, a skill's files, or an instruction file such as CLAUDE.md, AGENTS.md or an `.mcp.json`, compared with a lock you committed.
 
 ```yaml
 - uses: gostanos/smallprint-action@v1
@@ -35,13 +35,13 @@ npx smallprint lock --project
 git add smallprint.lock
 ```
 
-The check is local: it reads the repository's config and instruction files, compares them with the lock, and sends nothing anywhere. It exits 2 when something moved and prints what. When the change is yours, run `npx smallprint lock --project` again and commit. A lock written without `--project` also holds the machine's home-directory entries, which a CI runner does not have, so that check would fail on every run; the lock records which kind it is and the check honours it.
+The check is local: it reads the repository's config and instruction files, compares them with the lock, and sends nothing anywhere. It exits 2 when something changed and prints what. When the change is yours, run `npx smallprint lock --project` again and commit. A lock written without `--project` also holds the machine's home-directory entries, which a CI runner does not have, so that check would fail on every run; the lock records which kind it is and the check honours it.
 
 Inputs: `lockfile` (default `smallprint.lock`), `version` (the CLI version, default 0.1.2).
 
 ### With a code-scanning upload
 
-The step can write what moved as a SARIF log, and GitHub's upload-sarif action turns each line into a code-scanning alert on the pull request. Needs the `--sarif` flag, which is in `smallprint` 0.1.2 and later.
+The step can write what changed as a SARIF log, and GitHub's upload-sarif action turns each line into a code-scanning alert on the pull request. Needs the `--sarif` flag, which is in `smallprint` 0.1.2 and later.
 
 ```yaml
       - uses: gostanos/smallprint-action@v1

@@ -1,5 +1,5 @@
 name: "Small Print check"
-description: "Fails the build when a repository's MCP servers, skills or instruction files moved away from smallprint.lock. Sends nothing."
+description: "Fails the build when a repository's MCP servers, skills or instruction files changed since smallprint.lock. Sends nothing."
 author: "EmberStack LLC"
 branding:
   icon: "file-text"
@@ -14,7 +14,7 @@ inputs:
     required: false
     default: "0.1.2"
   sarif:
-    description: "Path to write a SARIF 2.1.0 log of what moved, for a code-scanning upload (empty: none)"
+    description: "Path to write a SARIF 2.1.0 log of what changed, for a code-scanning upload (empty: none)"
     required: false
     default: ""
 runs:
