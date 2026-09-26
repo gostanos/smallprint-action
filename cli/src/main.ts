@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * npx smallprint check [--json] [--no-upload] [--share] [--email <you@x>] [--no-signup] [--base <url>]
+ * npx smallprint check [--json] [--no-upload] [--upload|--yes] [--share] [--email <you@x>] [--no-signup] [--base <url>]
  * npx smallprint show <registry>/<name>      the record for one entry, from the read API (decision 223)
  * npx smallprint check --locked [--sarif <file>]   the lock check, with a SARIF log for code scanning
  * npx smallprint sync  --label "work laptop" [--yes] [--prune] [--dry-run] [--base <url>]
@@ -34,6 +34,7 @@ import { fileURLToPath } from "node:url";
 
 const args = process.argv.slice(2);
 const cmd = args[0];
+import { isYes, sendConsent } from "./consent";
 const flag = (k: string) => args.includes(`--${k}`);
 const opt = (k: string) => {
   const i = args.indexOf(`--${k}`);
@@ -58,7 +59,7 @@ const base = (opt("base") ?? (systemMode ? undefined : process.env.SMALLPRINT_BA
   }
 }
 
-const VERSION = "0.1.2";
+const VERSION = "0.1.3";
 const TIMEOUT = () => AbortSignal.timeout(20_000);
 /**
  * The one command for level four. sudo's own environment reset drops NODE_OPTIONS and every other variable an agent
@@ -304,7 +305,24 @@ async function check(): Promise<number> {
     return 0;
   }
   const payload = toUpload(found.items);
-  console.log(`\nSending to ${base}/api/check: ${payload.length} item${payload.length === 1 ? "" : "s"} (names, versions, hosts, file hashes; no config values).`);
+  // nothing leaves the machine until the person says so (decision 239): the list above is what would be sent, as names,
+  // versions, hosts and file hashes; the question is asked in a terminal, and without one nothing is sent
+  const what = `${payload.length} item${payload.length === 1 ? "" : "s"} (names, versions, hosts, file hashes; no config values)`;
+  const consent = sendConsent({ noUpload: flag("no-upload"), upload: flag("upload"), yes: flag("yes"), share: flag("share"), email: opt("email") }, Boolean(process.stdin.isTTY));
+  if (consent === "skip") {
+    console.log(`\nNothing sent. To get grades and advisories for the list above, run again with --upload: it sends ${what} to ${base}/api/check.`);
+    return 0;
+  }
+  if (consent === "ask") {
+    const rl = (await import("node:readline/promises")).createInterface({ input: process.stdin, output: process.stdout });
+    const answer = await rl.question(`\nSend ${what} to ${base}/api/check to get grades and advisories? [y/N] `);
+    rl.close();
+    if (!isYes(answer)) {
+      console.log("Nothing sent.");
+      return 0;
+    }
+  }
+  console.log(`\nSending to ${base}/api/check: ${what}.`);
   let res: Response;
   try {
     res = await fetch(`${base}/api/check`, { method: "POST", headers: { "content-type": "application/json", "user-agent": `smallprint-cli/${VERSION}` }, body: JSON.stringify({ items: payload, share: flag("share"), source: "cli" }), signal: TIMEOUT() });
@@ -880,7 +898,7 @@ if (cmd === "check") {
   process.exit(0);
 } else {
   console.log(`smallprint ${VERSION}
-usage: smallprint check [--json] [--no-upload] [--share] [--email <you@x>] [--no-signup] [--base <url>]
+usage: smallprint check [--json] [--no-upload] [--upload|--yes] [--share] [--email <you@x>] [--no-signup] [--base <url>]
        smallprint lock [--project] [--file smallprint.lock]   write what this machine runs, and its instruction-file hashes, to a file you commit; --project keeps to this directory
        smallprint check --locked [--project] [--file ...]      compare with the lock, exit 2 when anything moved; local only, works offline, made for CI
        smallprint gate [--project] [--strict]                  ask the record about every server here: exit 2 when a small print moved since the lock, 3 when a high advisory names one; for a shell hook before a session
