@@ -8,7 +8,7 @@ npx smallprint check --email you@company.com   # answer it up front; --no-signup
 npx smallprint check --share    # also get a card link you can post
 npx smallprint check --json     # machine-readable inventory, nothing sent; says so in itself (about, sent) and names its fields at https://smallprint.dev/cli#json
 npx smallprint check --no-upload  # discover and print, nothing sent
-npx smallprint@0.1.1 check        # pinned: npx then never fetches a version you have not read; pin it in anything unattended
+npx smallprint@0.1.2 check        # pinned: npx then never fetches a version you have not read; pin it in anything unattended
 npx smallprint show npm/mcp-remote   # the record for one entry: baseline, tools read, advisories, last releases
 npx smallprint check --locked --sarif smallprint.sarif   # the lock check, plus a SARIF log for a code-scanning upload
 
@@ -17,6 +17,8 @@ npx smallprint sync --label "work laptop" --dry-run                 # show what 
 npx smallprint sync --label "work laptop" --prune                   # drop pins this machine no longer has
 SMALLPRINT_TOKEN=sp_... npx smallprint schedule --install --label "work laptop"   # the sync every 6 hours, off-machine record of instruction files
 ```
+
+New to MCP servers and agent skills? https://smallprint.dev/guide is a step-by-step guide in plain words, and https://smallprint.dev/learn explains the basics in three levels, from what a terminal is to how to tell when an MCP server changes, with every fact linked to an official source.
 
 Small Print is not only a lookup: pin what you run and it emails you the morning any of it changes, with the change and its grade. Free keeps 25 pins and that daily brief; Pro adds scheduled syncs and the instruction-file record (prices at https://smallprint.dev/pricing). Signing up is the question at the end of `check`: type your email, the account is created, everything found is pinned, and one emailed link turns the daily brief on. Your email is the account and the link is the login; no password. A token (from your settings page) is only needed to pin a second machine with `sync`. Every account starts with 30 days of Pro, no card. After that, Free keeps 25 pins from a sync you run by hand; the scheduled runs and the instruction file record are Pro. The full guide with sample output is at https://smallprint.dev/cli.
 
