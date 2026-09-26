@@ -63,7 +63,7 @@ repos:
     hooks:
       - id: smallprint-lock
         name: small print lock
-        entry: npx -y smallprint@0.1.1 check --locked --no-upload --no-signup
+        entry: npx -y smallprint@0.1.2 check --locked --no-upload --no-signup
         language: system
         pass_filenames: false
 ```
