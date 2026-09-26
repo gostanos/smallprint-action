@@ -12,7 +12,7 @@ inputs:
   version:
     description: "smallprint CLI version to run"
     required: false
-    default: "0.1.2"
+    default: "0.1.4"
   sarif:
     description: "Path to write a SARIF 2.1.0 log of what changed, for a code-scanning upload (empty: none)"
     required: false
