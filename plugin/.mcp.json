@@ -1,0 +1,9 @@
+{
+  "smallprint": {
+    "command": "npx",
+    "args": [
+      "-y",
+      "smallprint-mcp@0.2.2"
+    ]
+  }
+}

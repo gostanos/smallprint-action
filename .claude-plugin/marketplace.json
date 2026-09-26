@@ -1,0 +1,21 @@
+{
+  "name": "smallprint",
+  "owner": {
+    "name": "EmberStack LLC",
+    "url": "https://smallprint.dev"
+  },
+  "description": "Small Print for Claude Code: the check, the locked check, the gate, and the record's MCP server.",
+  "plugins": [
+    {
+      "name": "smallprint",
+      "source": "./plugin",
+      "description": "See what this machine's agents have installed, check it against a lock, and read Small Print's record. The check sends nothing anywhere.",
+      "category": "security",
+      "tags": [
+        "mcp",
+        "security",
+        "supply-chain"
+      ]
+    }
+  ]
+}

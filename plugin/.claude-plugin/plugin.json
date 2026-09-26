@@ -1,0 +1,20 @@
+{
+  "name": "smallprint",
+  "displayName": "Small Print",
+  "version": "0.1.0",
+  "description": "See the MCP servers, skills and plugins this machine's agents have installed, check them against a lock file, and read Small Print's record of what each one tells an agent. The check sends nothing anywhere.",
+  "author": {
+    "name": "EmberStack LLC",
+    "url": "https://smallprint.dev"
+  },
+  "homepage": "https://smallprint.dev/cli",
+  "repository": "https://github.com/gostanos/smallprint-action",
+  "license": "MIT",
+  "keywords": [
+    "mcp",
+    "mcp-server",
+    "agent-skills",
+    "supply-chain-security",
+    "small-print"
+  ]
+}
