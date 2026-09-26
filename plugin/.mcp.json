@@ -3,7 +3,7 @@
     "command": "npx",
     "args": [
       "-y",
-      "smallprint-mcp@0.2.2"
+      "smallprint-mcp@0.2.3"
     ]
   }
 }

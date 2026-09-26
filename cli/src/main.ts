@@ -59,7 +59,7 @@ const base = (opt("base") ?? (systemMode ? undefined : process.env.SMALLPRINT_BA
   }
 }
 
-const VERSION = "0.1.3";
+const VERSION = "0.1.4";
 const TIMEOUT = () => AbortSignal.timeout(20_000);
 /**
  * The one command for level four. sudo's own environment reset drops NODE_OPTIONS and every other variable an agent
@@ -234,11 +234,11 @@ async function lock(): Promise<number> {
       for (const l of formatDiff(d)) console.log(l);
     } else console.log("Nothing changed since the last lock.");
   }
-  console.log("Commit it. `smallprint check --locked` then fails when anything moves, here or in CI.");
+  console.log("Commit it. `smallprint check --locked` then fails when anything changes, here or in CI.");
   return 0;
 }
 
-/** `check --locked`: compare this machine with the lock and exit 2 when anything moved. Local only, works offline. */
+/** `check --locked`: compare this machine with the lock and exit 2 when anything changed. Local only, works offline. */
 function checkLocked(found: ReturnType<typeof discover>): number {
   const path = lockPath();
   if (!existsSync(path)) {
@@ -257,7 +257,7 @@ function checkLocked(found: ReturnType<typeof discover>): number {
   const current = currentLock(found, scope);
   const d = diffLock(previous, current);
   if (diffIsEmpty(d)) {
-    console.log(`Matches ${path} (written ${previous.written.slice(0, 10)}, ${scope === "project" ? "this project" : "this machine"}): ${current.items.length} servers and skills, ${current.files.length} instruction files, nothing moved.`);
+    console.log(`Matches ${path} (written ${previous.written.slice(0, 10)}, ${scope === "project" ? "this project" : "this machine"}): ${current.items.length} servers and skills, ${current.files.length} instruction files, nothing changed.`);
     return 0;
   }
   console.log(`Differs from ${path} (written ${previous.written.slice(0, 10)}):`);
@@ -356,7 +356,7 @@ async function offerBrief(payload: ReturnType<typeof toUpload>): Promise<number>
       return 0;
     }
     const rl = (await import("node:readline/promises")).createInterface({ input: process.stdin, output: process.stdout });
-    email = (await rl.question("\nWatch these every morning? Type your email to start: 30 days of Pro, no card; Free after that keeps 25 pins and the daily brief. Enter to skip (--no-signup silences this): ")).trim();
+    email = (await rl.question("\nWatch these every morning? Type your email to start: 30 days of Pro, no credit card required; Free after that keeps 25 pins and the daily brief. Enter to skip (--no-signup silences this): ")).trim();
     rl.close();
     if (!email) return 0;
   }
@@ -485,7 +485,7 @@ async function sync(): Promise<number> {
     for (const l of r.files.limited) fileLines.push(`  not recorded: ${name(l)}: ${l.reason}`);
   }
   if (quiet) {
-    // the scheduled run: one line when nothing moved, the alerts when something did
+    // the scheduled run: one line when nothing changed, the alerts when something did
     console.log(`[${new Date().toISOString()}] ${summary} ${r.files ? `${r.files.recorded} instruction files reported` : ""}${alerts.length ? `; ${alerts.length} CHANGED` : ""}`);
     for (const a of alerts) console.log(a);
     for (const p of problems) console.log(p);
@@ -785,7 +785,7 @@ async function schedule(): Promise<number> {
 
 /**
  * `smallprint gate` (decision 145): the pre-session check. Every server this machine runs is looked up on the record,
- * and the command exits non-zero when the small print of an installed version moved since the lock, or when an
+ * and the command exits non-zero when the small print of an installed version changed since the lock, or when an
  * advisory names an installed version. One request per server, names and versions only, nothing else sent. Made for
  * a shell hook or a launcher: `smallprint gate && claude`.
  */
@@ -802,7 +802,7 @@ async function gate(): Promise<number> {
     return 0;
   }
   const strict = flag("strict");
-  let moved = 0, advisories = 0, unknown = 0;
+  let changed = 0, advisories = 0, unknown = 0;
   for (const it of items) {
     const cn = it.canonicalName!;
     const [registry, ...rest] = cn.split(":");
@@ -821,7 +821,7 @@ async function gate(): Promise<number> {
     const lockedItem = locked?.items.find((l) => l.canonicalName === cn);
     if (lockedItem?.recordSha256 && lockedItem.version) {
       const now = e.versions.find((v) => v.version === lockedItem.version)?.contentHash;
-      if (now && now !== lockedItem.recordSha256) { console.log(`  !  ${cn} @ ${lockedItem.version}: the record's digest for this version changed since the lock was written (was ${lockedItem.recordSha256.slice(0, 12)}, now ${now.slice(0, 12)})`); moved++; }
+      if (now && now !== lockedItem.recordSha256) { console.log(`  !  ${cn} @ ${lockedItem.version}: the record's digest for this version changed since the lock was written (was ${lockedItem.recordSha256.slice(0, 12)}, now ${now.slice(0, 12)})`); changed++; }
     }
     const since = lockedVersion.get(cn) ?? installed;
     const sinceRow = since ? e.versions.find((v) => v.version === since) : undefined;
@@ -830,15 +830,15 @@ async function gate(): Promise<number> {
     const adv = e.advisories.filter((a) => a.severity === "critical" || a.severity === "high");
     const line = [`${cn}${installed ? ` @ ${installed}` : ""}`];
     if (!sinceRow) { line.push(since ? `version ${since} not read on the record` : "no version to compare"); unknown++; }
-    else if (changedSince.length) { line.push(`small print moved in ${changedSince.length} release(s) since ${since}, worst ${worst}`); moved++; }
+    else if (changedSince.length) { line.push(`small print changed in ${changedSince.length} release(s) since ${since}, worst ${worst}`); changed++; }
     else line.push(`unchanged since ${since}`);
     if (adv.length) { line.push(`${adv.length} high or critical advisory(ies): ${adv.map((a) => a.id).join(", ")}`); advisories++; }
     console.log(`  ${changedSince.length || adv.length ? "!" : sinceRow ? "ok" : "?"}  ${line.join("; ")}  ${e.asset.url}`);
   }
-  const bad = moved + advisories + (strict ? unknown : 0);
-  console.log(bad ? `Gate: ${moved} moved, ${advisories} with advisories, ${unknown} unknown. Exit ${moved || (strict && unknown) ? 2 : 3}.` : `Gate: clear. ${items.length} server(s), ${unknown} unknown.`);
+  const bad = changed + advisories + (strict ? unknown : 0);
+  console.log(bad ? `Gate: ${changed} changed, ${advisories} with advisories, ${unknown} unknown. Exit ${changed || (strict && unknown) ? 2 : 3}.` : `Gate: clear. ${items.length} server(s), ${unknown} unknown.`);
   if (!bad) return 0;
-  return moved || (strict && unknown) ? 2 : 3;
+  return changed || (strict && unknown) ? 2 : 3;
 }
 const RANK_ORDER = ["info", "low", "medium", "high", "critical"];
 
@@ -900,8 +900,8 @@ if (cmd === "check") {
   console.log(`smallprint ${VERSION}
 usage: smallprint check [--json] [--no-upload] [--upload|--yes] [--share] [--email <you@x>] [--no-signup] [--base <url>]
        smallprint lock [--project] [--file smallprint.lock]   write what this machine runs, and its instruction-file hashes, to a file you commit; --project keeps to this directory
-       smallprint check --locked [--project] [--file ...]      compare with the lock, exit 2 when anything moved; local only, works offline, made for CI
-       smallprint gate [--project] [--strict]                  ask the record about every server here: exit 2 when a small print moved since the lock, 3 when a high advisory names one; for a shell hook before a session
+       smallprint check --locked [--project] [--file ...]      compare with the lock, exit 2 when anything changed; local only, works offline, made for CI
+       smallprint gate [--project] [--strict]                  ask the record about every server here: exit 2 when a small print changed since the lock, 3 when a high advisory names one; for a shell hook before a session
        smallprint sync --label "work laptop" [--yes] [--prune] [--dry-run] [--base <url>]   (SMALLPRINT_TOKEN=sp_...)
        smallprint schedule --install --label "work laptop" [--every 6] | --status | --uninstall
        sudo --preserve-env=PATH,SMALLPRINT_TOKEN smallprint schedule --install --system --label "work laptop"   (level four: a root-owned reporter the agent cannot reach)

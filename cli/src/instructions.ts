@@ -144,7 +144,7 @@ const sha256 = (b: Buffer) => createHash("sha256").update(b).digest("hex");
  * runs), permissions (what it may do without asking), env and the key helper.
  * Claude Code rewrites the permission list itself every time someone picks
  * "always allow", so a plain file hash would read as changed most days. One hash
- * per top-level key lets the report say which part moved. Values are hashed,
+ * per top-level key lets the report say which part changed. Values are hashed,
  * never kept.
  */
 export function sectionHashes(text: string): Record<string, string> | undefined {

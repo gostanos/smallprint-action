@@ -1,7 +1,7 @@
 /**
  * The lockfile (decision 102): what the agents on this machine run, and the hashes of the
  * instruction files they read, written to a file that can be committed beside the project. A
- * later `check --locked` compares the machine with the lock and says what moved: a server whose
+ * later `check --locked` compares the machine with the lock and says what changed: a server whose
  * version changed, a skill whose files changed, an instruction file rewritten, something added
  * or gone. Entirely local: nothing is sent, nothing is fetched, and it works offline, so it can
  * run in CI. The file holds names, versions, hosts, hashes and instruction-file paths, never a
@@ -166,10 +166,10 @@ export function sarifLog(diffLines: readonly string[], lockPath: string, version
     return {
       ruleId: `smallprint/lock-${kind}`,
       level: "error",
-      message: { text: `${text}. The small print moved away from ${lockPath}; if this is yours, run smallprint lock again and commit it.` },
+      message: { text: `${text}. The small print changed since ${lockPath} was written; if this is yours, run smallprint lock again and commit it.` },
       ...(file && !file.includes(" ") ? { locations: [{ physicalLocation: { artifactLocation: { uri: file } } }] } : {}),
     };
   });
-  const rules = [...new Set(results.map((r) => r.ruleId))].map((id) => ({ id, shortDescription: { text: "The small print this project's agents read moved away from the committed lock" }, helpUri: "https://smallprint.dev/cli" }));
+  const rules = [...new Set(results.map((r) => r.ruleId))].map((id) => ({ id, shortDescription: { text: "The small print this project's agents read changed since the committed lock was written" }, helpUri: "https://smallprint.dev/cli" }));
   return { version: "2.1.0", $schema: "https://json.schemastore.org/sarif-2.1.0.json", runs: [{ tool: { driver: { name: "smallprint", version, informationUri: "https://smallprint.dev/cli", rules } }, results }] };
 }
