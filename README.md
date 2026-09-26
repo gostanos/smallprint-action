@@ -37,7 +37,7 @@ git add smallprint.lock
 
 The check is local: it reads the repository's config and instruction files, compares them with the lock, and sends nothing anywhere. It exits 2 when something moved and prints what. When the change is yours, run `npx smallprint lock --project` again and commit. A lock written without `--project` also holds the machine's home-directory entries, which a CI runner does not have, so that check would fail on every run; the lock records which kind it is and the check honours it.
 
-Inputs: `lockfile` (default `smallprint.lock`), `version` (the CLI version, default 0.1.1).
+Inputs: `lockfile` (default `smallprint.lock`), `version` (the CLI version, default 0.1.2).
 
 ### With a code-scanning upload
 
