@@ -19,6 +19,8 @@ npx smallprint sync --label "work laptop" --prune                   # drop pins 
 SMALLPRINT_TOKEN=sp_... npx smallprint schedule --install --label "work laptop"   # the sync every 6 hours, off-machine record of instruction files
 ```
 
+Inside Claude Code, the same check is a plugin: `claude plugin marketplace add gostanos/smallprint-action`, then `claude plugin install smallprint@smallprint`, and `/smallprint:check` runs it with nothing sent. The plugin also bundles Small Print's MCP server, so Claude can read the record itself.
+
 New to MCP servers and agent skills? https://smallprint.dev/guide is a step-by-step guide in plain words, and https://smallprint.dev/learn explains the basics in three levels, from what a terminal is to how to tell when an MCP server changes, with every fact linked to an official source.
 
 Small Print is not only a lookup: pin what you run and it emails you the morning any of it changes, with the change and its grade. Free keeps 25 pins and that daily brief; Pro adds scheduled syncs and the instruction-file record (prices at https://smallprint.dev/pricing). Signing up is the question at the end of `check`: type your email, the account is created, everything found is pinned, and one emailed link turns the daily brief on. Your email is the account and the link is the login; no password. A token (from your settings page) is only needed to pin a second machine with `sync`. Every account starts with 30 days of Pro, no card. After that, Free keeps 25 pins from a sync you run by hand; the scheduled runs and the instruction file record are Pro. The full guide with sample output is at https://smallprint.dev/cli.
