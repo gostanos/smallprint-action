@@ -1,8 +1,8 @@
 {
   "name": "smallprint-vscode",
   "displayName": "Small Print (MCP)",
-  "description": "Watch the MCP servers, skills and instruction files your agents use, and get a notice when what they tell your agent changes. Nothing is sent until you allow it.",
-  "version": "1.0.0",
+  "description": "Watch the MCP servers, skills and instruction files your agents use, and see when what they tell your agent changes. Nothing is sent until you allow it.",
+  "version": "1.0.1",
   "publisher": "smallprint",
   "license": "MIT",
   "private": true,
@@ -158,8 +158,8 @@
   "devDependencies": {
     "@types/node": "^22.0.0",
     "@types/vscode": "1.90.0",
-    "tsup": "^8.5.1",
+    "tsup": "^9.0.0",
     "typescript": "~5.9.3",
-    "vitest": "^4.1.11"
+    "vitest": "^4.1.12"
   }
 }

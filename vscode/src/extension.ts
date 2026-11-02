@@ -8,9 +8,9 @@ import { createHash } from "node:crypto";
 import { homedir } from "node:os";
 import { discover, type DiscoveredServer, type DiscoveredSkill } from "../../cli/src/discover";
 import { readInstructionFiles, type InstructionFile } from "../../cli/src/instructions";
-import { DEFAULT_BASE, evaluateLocal, evaluateServer, notifies, safeBase, userSetting, type Finding, type RecordEntry, type ServerState } from "./core";
+import { DEFAULT_BASE, evaluateLocal, evaluateServer, failedWords, lookupWords, notifies, plural, safeBase, userSetting, type Finding, type RecordEntry, type ServerState } from "./core";
 
-const VERSION = "1.0.0";
+const VERSION = "1.0.1";
 const LOCAL_SCAN_MS = 10 * 60_000;
 const OWN_SAVE_MS = 15_000;
 
@@ -22,6 +22,8 @@ interface Stored {
   lastLocalAt: string | null;
   lastRecordAt: string | null;
   recordError: string | null;
+  /** Each server's last lookup that brought no record: 404, another status, or null for no answer (pass 5 audit of 16 Oct 2026). */
+  lookups?: Record<string, number | null>;
 }
 const EMPTY: Stored = { servers: {}, skills: {}, files: {}, findings: [], lastLocalAt: null, lastRecordAt: null, recordError: null };
 
@@ -150,19 +152,22 @@ async function checkRecord(asked: boolean): Promise<void> {
   for (const x of named) {
     const [registry, ...rest] = x.canonicalName!.split(":");
     const url = `${base}/api/asset/${registry}/${rest.join(":").split("/").map(encodeURIComponent).join("/")}`;
+    const key = keyOf(x);
+    const lookups = (s.lookups ??= {});
     try {
       const res = await fetch(url, { headers: { accept: "application/json", "user-agent": `smallprint-vscode/${VERSION}` }, signal: AbortSignal.timeout(20_000) });
-      if (res.status === 404) continue;
-      if (!res.ok) { failed++; continue; }
+      // a 404 and a failed lookup are told apart in the panel (pass 5 audit of 16 Oct 2026)
+      if (res.status === 404) { lookups[key] = 404; continue; }
+      if (!res.ok) { lookups[key] = res.status; failed++; continue; }
       const entry = (await res.json()) as RecordEntry;
-      const key = keyOf(x);
       const r = evaluateServer(key, x.name, x.version, entry, s.servers[key]);
       s.servers[key] = r.state;
+      delete lookups[key];
       fresh.push(...r.findings);
-    } catch { failed++; }
+    } catch { lookups[key] = null; failed++; }
   }
   s.lastRecordAt = new Date().toISOString();
-  s.recordError = failed ? `${failed} lookup${failed === 1 ? "" : "s"} did not answer; they are tried again at the next check.` : null;
+  s.recordError = failed ? failedWords(failed) : null;
   await addFindings(s, fresh);
 }
 
@@ -226,7 +231,7 @@ function refresh(): void {
   const unanswered = !open && lookupSetting() === "ask" && servers.some((x) => x.canonicalName);
   status.command = unanswered ? "smallprint.askLookup" : "workbench.view.extension.smallprint";
   status.text = open ? `$(warning) Small Print: ${open} to look at` : unanswered ? "$(question) Small Print: check your MCP servers?" : "$(shield) Small Print";
-  status.tooltip = unanswered ? "Click to choose whether Small Print may look up your MCP servers on smallprint.dev by package name. Nothing is sent until you choose Allow." : open ? `${open} change${open === 1 ? "" : "s"} to what your agents read. Click to see them.` : `Watching ${servers.length} MCP servers, ${skills.length} skills and ${files.length} instruction files. Last checked ${et(s.lastRecordAt ?? s.lastLocalAt)}.`;
+  status.tooltip = unanswered ? "Click to choose whether Small Print may look up your MCP servers on smallprint.dev by package name. Nothing is sent until you choose Allow." : open ? `${open} to look at. Click to see them.` : `Watching ${plural(servers.length, "MCP server")}, ${plural(skills.length, "skill")} and ${plural(files.length, "instruction file")}. Last checked ${et(s.lastRecordAt ?? s.lastLocalAt)}.`;
   status.show();
   tree.fire();
 }
@@ -255,7 +260,7 @@ class WatchTree implements vscode.TreeDataProvider<Node> {
     })) });
     roots.push({ id: "servers", label: "MCP servers", description: String(servers.length), icon: "server", children: servers.map((x) => {
       const st = s.servers[keyOf(x)];
-      const why = !x.canonicalName ? (x.remoteHost ? `hosted at ${x.remoteHost}; run \`npx smallprint check --live\` to compare it` : "a local path, not a published package") : lookup === "never" ? "lookup is off" : st ? `on record, checked ${et(st.checkedAt)}` : lookup === "ask" ? "not looked up yet" : "not on record yet";
+      const why = !x.canonicalName ? (x.remoteHost ? `hosted at ${x.remoteHost}; run \`npx smallprint check --live\` to compare it` : "a local path, not a published package") : lookup === "never" ? "lookup is off" : st ? `on record, checked ${et(st.checkedAt)}` : s.lookups && keyOf(x) in s.lookups ? lookupWords(s.lookups[keyOf(x)] ?? null) : "not looked up yet";
       // never a check mark: being on record says nothing about whether a server is fine, and Small Print does not say that
       const open = s.findings.filter((f) => f.key.includes(`:${keyOf(x)}:`));
       const icon = open.length ? "warning" : st ? "eye" : "circle-outline";

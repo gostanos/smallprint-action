@@ -1,6 +1,6 @@
 # Small Print (MCP) for VS Code and Cursor
 
-Your AI agent follows the text that its MCP servers, skills and instruction files give it: tool descriptions, skill instructions, `CLAUDE.md`, `AGENTS.md`, rules. That text can change between versions without the version number saying so. This extension watches it for you and shows a notice when it changes.
+Your AI agent follows the text that its MCP servers, skills and instruction files give it: tool descriptions, skill instructions, `CLAUDE.md`, `AGENTS.md`, rules. That text can change between versions without the version number saying so. This extension watches it for you.
 
 ![Another program changed CLAUDE.md: Small Print shows the old file beside the new one, with the added line highlighted](https://raw.githubusercontent.com/gostanos/smallprint-action/main/vscode/media/screens/4-what-changed.png)
 
@@ -8,7 +8,7 @@ Your AI agent follows the text that its MCP servers, skills and instruction file
 
 - **Instruction files** such as `CLAUDE.md`, `AGENTS.md`, `.mcp.json` and Cursor and Windsurf rules. When one changes outside this editor, you get a notice and a side-by-side view of what changed. This runs entirely on your machine.
 - **Skills** that your agents load. When a skill's files change on disk, you get a notice. This also runs entirely on your machine.
-- **MCP servers** that come from a published package. Once you allow it, the extension looks each one up on the public record at [smallprint.dev](https://smallprint.dev), a nightly record of more than 90,000 MCP servers, skills and plugins. You get a notice when a new release changes what a server tells your agent, when your machine moves to a version that did, and when a high or critical security advisory names the version you run.
+- **MCP servers** that come from a published package. Once you allow it, the extension looks each one up on the public record at [smallprint.dev](https://smallprint.dev). By default you get a notice when a change on record is graded high or critical, and when a high or critical security advisory's range covers, or may cover, the version you run.
 
 Everything it finds is listed in the Small Print panel, and the status bar shows when something needs a look.
 
@@ -26,7 +26,7 @@ The lookup setting and the record's address are read only from your user setting
 
 ## What it does not do
 
-It does not watch what a server does while it runs, it does not sit between your agent and its tools, and it cannot stop a tool call. It reads the text a server or skill gives your agent, and it tells you when that text changes.
+It does not watch what a server does while it runs, it does not sit between your agent and its tools, and it cannot stop a tool call.
 
 The extension is open source under the MIT licence. It is made by EmberStack LLC, which runs [smallprint.dev](https://smallprint.dev).
 
@@ -36,7 +36,7 @@ On first start it asks before anything is sent:
 
 ![The first start: Small Print asks before looking anything up](https://raw.githubusercontent.com/gostanos/smallprint-action/main/vscode/media/screens/1-asks-first.png)
 
-A critical advisory names the version of a server this machine runs:
+A critical advisory's range covers the version of a server this machine runs:
 
 ![A notice for CVE-2025-6514 on mcp-remote 0.1.15, and the Small Print panel](https://raw.githubusercontent.com/gostanos/smallprint-action/main/vscode/media/screens/2-advisory.png)
 
